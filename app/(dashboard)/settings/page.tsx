@@ -1,0 +1,184 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { AdminPageFrame, AdminSectionCard, ProfileHero } from "@/components/admin/primitives";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { changePassword, getProfile, updateProfile } from "@/lib/api";
+
+type ProfileData = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  bio?: string;
+  address?: string;
+  image?: string;
+  profileImage?: string;
+  avatar?: string;
+};
+
+function splitName(name?: string) {
+  const fullName = name || "Brooklyn Simmons";
+  const [firstName, ...rest] = fullName.split(" ");
+  return {
+    firstName,
+    lastName: rest.join(" ") || "Simmons",
+  };
+}
+
+export default function SettingsPage() {
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<"personal" | "password">("personal");
+
+  const profileQuery = useQuery({
+    queryKey: ["admin-profile"],
+    queryFn: getProfile,
+  });
+
+  const profile = profileQuery.data as ProfileData | undefined;
+  const names = useMemo(() => splitName(profile?.name), [profile?.name]);
+
+  const updateMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: () => {
+      toast.success("Profile updated successfully.");
+      queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: changePassword,
+    onSuccess: () => {
+      toast.success("Password changed successfully.");
+    },
+  });
+
+  function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const firstName = String(formData.get("firstName") || "").trim();
+    const lastName = String(formData.get("lastName") || "").trim();
+    formData.delete("firstName");
+    formData.delete("lastName");
+    formData.set("name", `${firstName} ${lastName}`.trim());
+    updateMutation.mutate(formData);
+  }
+
+  function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    passwordMutation.mutate({
+      currentPassword: String(formData.get("currentPassword") || ""),
+      newPassword: String(formData.get("newPassword") || ""),
+      confirmPassword: String(formData.get("confirmPassword") || ""),
+    });
+  }
+
+  return (
+    <AdminPageFrame title="Setting" subtitle="Mange your Profile Information">
+      <div className="grid gap-5 md:grid-cols-2">
+        <button
+          className={`h-[62px] rounded-[10px] border text-[24px] font-medium ${
+            tab === "personal" ? "bg-[#6d98c0] text-white border-[#6d98c0]" : "border-[#3d8ef5] bg-white text-[#4090f7]"
+          }`}
+          onClick={() => setTab("personal")}
+          type="button"
+        >
+          Personal Information
+        </button>
+        <button
+          className={`h-[62px] rounded-[10px] border text-[24px] font-medium ${
+            tab === "password" ? "bg-[#6d98c0] text-white border-[#6d98c0]" : "border-[#3d8ef5] bg-white text-[#4090f7]"
+          }`}
+          onClick={() => setTab("password")}
+          type="button"
+        >
+          Change Password
+        </button>
+      </div>
+
+      <div className="mt-8">
+        <ProfileHero
+          name={profile?.name || "Brooklyn Simmons"}
+          roleLabel="@admin"
+          image={profile?.avatar || profile?.image || profile?.profileImage}
+          onPickImage={
+            tab === "personal"
+              ? (file) => {
+                  const formData = new FormData();
+                  formData.set("avatar", file);
+                  updateMutation.mutate(formData);
+                }
+              : undefined
+          }
+          uploading={updateMutation.isPending}
+        />
+      </div>
+
+      {tab === "personal" ? (
+        <AdminSectionCard className="mt-8">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <h2 className="text-[24px] font-semibold text-[#202124]">Personal Information</h2>
+            <Button className="h-[44px] rounded-[10px] bg-[#6d98c0] px-6 hover:bg-[#5f88ae]">Edit</Button>
+          </div>
+
+          <form className="space-y-5" onSubmit={handleProfileSubmit}>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className="mb-3 block text-[16px] font-medium text-[#202124]">Full Name</label>
+                <Input className="h-[54px] rounded-[10px] border-[#cfd4dc]" defaultValue={names.firstName} name="firstName" />
+              </div>
+              <div>
+                <label className="mb-3 block text-[16px] font-medium text-[#202124]">Email Address</label>
+                <Input className="h-[54px] rounded-[10px] border-[#cfd4dc]" defaultValue={profile?.email || "raja1234@example.com"} name="email" />
+              </div>
+              <div>
+                <label className="mb-3 block text-[16px] font-medium text-[#202124]">Phone</label>
+                <Input className="h-[54px] rounded-[10px] border-[#cfd4dc]" defaultValue={profile?.phone || "(307) 555-0133"} name="phone" />
+              </div>
+            </div>
+            <div>
+              <label className="mb-3 block text-[16px] font-medium text-[#202124]">Bio</label>
+              <textarea
+                className="min-h-[145px] w-full rounded-[10px] border border-[#cfd4dc] px-4 py-4 text-[16px] text-[#555] outline-none focus:border-[#3d8ef5]"
+                defaultValue={
+                  profile?.bio ||
+                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+                }
+                name="bio"
+              />
+            </div>
+            <Button className="h-[52px] rounded-[10px] bg-[#6d98c0] px-8 text-[18px] hover:bg-[#5f88ae]" disabled={updateMutation.isPending} type="submit">
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </form>
+        </AdminSectionCard>
+      ) : (
+        <AdminSectionCard className="mt-8">
+          <h2 className="text-[24px] font-semibold text-[#202124]">Change password</h2>
+          <form className="mt-6" onSubmit={handlePasswordSubmit}>
+            <div className="grid gap-5 xl:grid-cols-[1fr_1fr_1fr_auto] xl:items-end">
+              <div>
+                <label className="mb-3 block text-[16px] font-medium text-[#202124]">Current Password</label>
+                <Input className="h-[52px] rounded-[10px] border-[#3d8ef5]" name="currentPassword" type="password" />
+              </div>
+              <div>
+                <label className="mb-3 block text-[16px] font-medium text-[#202124]">New Password</label>
+                <Input className="h-[52px] rounded-[10px] border-[#3d8ef5]" name="newPassword" type="password" />
+              </div>
+              <div>
+                <label className="mb-3 block text-[16px] font-medium text-[#202124]">Confirm New Password</label>
+                <Input className="h-[52px] rounded-[10px] border-[#3d8ef5]" name="confirmPassword" type="password" />
+              </div>
+              <Button className="h-[52px] rounded-[10px] bg-[#6d98c0] px-8 text-[16px] hover:bg-[#5f88ae]" disabled={passwordMutation.isPending} type="submit">
+                {passwordMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </AdminSectionCard>
+      )}
+    </AdminPageFrame>
+  );
+}
