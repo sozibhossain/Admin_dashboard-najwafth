@@ -391,16 +391,22 @@ export function DriverCard({
   onAssign?: () => void;
 }) {
   const availability = driver.status || (driver.currentOrders ? "busy" : "available");
+  const avatarUrl = getAssetUrl(driver.avatar);
+  const driverDisplayName = driver.name || driver.email?.split("@")[0] || "Driver";
 
   return (
     <Card className="rounded-[18px] border-[#d6dee7] p-4 shadow-none">
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-3">
-          <div className="flex size-11 items-center justify-center rounded-full bg-[#dab38f] text-sm font-semibold text-white">
-            {driver.name?.charAt(0) || "R"}
+          <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-full bg-[#dab38f] text-sm font-semibold text-white">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={driverDisplayName} fill sizes="44px" className="object-cover" />
+            ) : (
+              driverDisplayName.charAt(0).toUpperCase()
+            )}
           </div>
           <div>
-            <p className="text-[16px] font-semibold text-[#202124]">{driver.name || "Rahim Khan"}</p>
+            <p className="text-[16px] font-semibold text-[#202124]">{driverDisplayName}</p>
             <p className={cn("mt-1 text-[13px] font-medium capitalize", availability === "busy" ? "text-[#f97316]" : "text-[#16a34a]")}>
               <span className="mr-2 inline-block size-2 rounded-full bg-current" />
               {availability}

@@ -20,15 +20,18 @@ type DriverRequestRow = {
   totalAmount?: number;
   price?: number;
   status?: string;
-  orderId?: {
-    _id?: string;
-    orderId?: string;
-  };
+  orderId?:
+    | string
+    | {
+        _id?: string;
+        orderId?: string;
+      };
 };
 
 type DriverRow = {
   _id: string;
   name?: string;
+  email?: string;
   phone?: string;
   avatar?: { url?: string };
 };
@@ -95,10 +98,15 @@ export default function AdminDashboardPage() {
 
   const requestRows = useMemo(
     () =>
-      (overview?.recentDriverRequests || []).map((request) => ({
-        ...request,
-        orderId: request.orderId?.orderId || request.orderId?._id || request._id,
-      })),
+      (overview?.recentDriverRequests || []).map((request) => {
+        const raw = request.orderId;
+        const resolvedOrderId =
+          typeof raw === "string" ? raw : raw?.orderId || raw?._id || request._id;
+        return {
+          ...request,
+          orderId: resolvedOrderId,
+        };
+      }),
     [overview],
   );
 
@@ -109,28 +117,53 @@ export default function AdminDashboardPage() {
   return (
     <AdminPageFrame title="Dashboard" subtitle="Manage Bookstores & Drivers">
       <div className="grid gap-4 lg:grid-cols-4">
-        <AdminMetricCard label="Total Bookstores" value={overview?.metrics.totalBookstores || 0} accent="blue" />
-        <AdminMetricCard label="Total Drivers" value={overview?.metrics.totalDrivers || 0} accent="blue" note="+2 today" />
-        <AdminMetricCard label="Total Driver Request" value={overview?.metrics.totalDriverRequests || 0} accent="blue" />
-        <AdminMetricCard label="Total Completed" value={overview?.metrics.totalCompleted || 0} accent="blue" />
+        <AdminMetricCard label="Total Bookstores" value={overview?.metrics.totalBookstores ?? 0} accent="blue" note="" />
+        <AdminMetricCard label="Total Drivers" value={overview?.metrics.totalDrivers ?? 0} accent="blue" note="" />
+        <AdminMetricCard label="Total Driver Request" value={overview?.metrics.totalDriverRequests ?? 0} accent="blue" note="" />
+        <AdminMetricCard label="Total Completed" value={overview?.metrics.totalCompleted ?? 0} accent="blue" note="" />
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
         <AdminSectionCard>
           <h2 className="text-[22px] font-semibold text-[#202124]">Driver Delivery Activity</h2>
           <div className="mt-7 h-[330px] rounded-[16px] border border-[#e5e7eb] p-6">
-            <div className="flex h-full items-end gap-5">
+            <div className="relative flex h-full items-end gap-5">
               {deliveryActivity.map((item, index) => (
                 <div key={`${item.label}-${index}`} className="flex flex-1 flex-col items-center gap-3">
-                  <div className="flex h-[260px] w-full items-end rounded-[8px] bg-[linear-gradient(180deg,rgba(64,144,247,0.12),rgba(64,144,247,0.03))] px-2 pb-0">
+                  <div className="relative flex h-[260px] w-full items-end rounded-[8px] bg-[linear-gradient(180deg,rgba(64,144,247,0.12),rgba(64,144,247,0.03))] px-2 pb-0">
                     <div
                       className="w-full rounded-t-[6px] bg-[linear-gradient(180deg,#63a5e5_0%,#4f99df_100%)]"
-                      style={{ height: `${Math.max((item.value / maxValue) * 100, 6)}%` }}
+                      style={{ height: `${Math.max((item.value / maxValue) * 100, 2)}%` }}
                     />
                   </div>
                   <span className="text-[13px] text-[#6b7280]">{item.label}</span>
                 </div>
               ))}
+              <svg
+                className="pointer-events-none absolute inset-x-0 top-0 h-[260px] w-full"
+                preserveAspectRatio="none"
+                viewBox={`0 0 ${Math.max(deliveryActivity.length - 1, 1) * 100} 100`}
+              >
+                <polyline
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="1"
+                  points={deliveryActivity
+                    .map((item, index) => `${index * 100},${100 - Math.max((item.value / maxValue) * 100, 2)}`)
+                    .join(" ")}
+                />
+                {deliveryActivity.map((item, index) => (
+                  <circle
+                    key={`pt-${index}`}
+                    cx={index * 100}
+                    cy={100 - Math.max((item.value / maxValue) * 100, 2)}
+                    r="2"
+                    fill="#fff"
+                    stroke="#f87171"
+                    strokeWidth="1"
+                  />
+                ))}
+              </svg>
             </div>
           </div>
         </AdminSectionCard>
