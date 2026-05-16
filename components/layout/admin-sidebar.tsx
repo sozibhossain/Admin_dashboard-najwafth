@@ -4,6 +4,7 @@ import Image from "next/image";
 import {
   ChartNoAxesCombined,
   LayoutDashboard,
+  LibraryBig,
   LogOut,
   Menu,
   Settings,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/shops", label: "Books store Management", icon: Store },
+  { href: "/categories", label: "Categories", icon: LibraryBig },
   { href: "/driver-requests", label: "Driver Requests", icon: Truck },
   { href: "/drivers", label: "Driver Management", icon: UserRoundCog },
   { href: "/profit-overview", label: "Profit Overview", icon: ChartNoAxesCombined },
@@ -53,7 +55,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 rounded-[10px] px-4 py-4 text-[16px] font-medium transition",
-                isActive ? "bg-[#6d98c0] text-white" : "text-[#252525] hover:bg-white/60",
+                isActive
+                  ? "bg-[#6d98c0] text-white [&_svg]:text-white"
+                  : "text-[#252525] hover:bg-white/60",
               )}
               onClick={onClose}
             >
@@ -67,7 +71,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         href="/logout"
         className={cn(
           "mt-6 flex items-center gap-3 rounded-[10px] px-4 py-4 text-[16px] font-medium transition",
-          matchRoute(pathname, "/logout") ? "bg-[#6d98c0] text-white" : "text-[#252525] hover:bg-white/60",
+          matchRoute(pathname, "/logout")
+            ? "bg-[#6d98c0] text-white [&_svg]:text-white"
+            : "text-[#252525] hover:bg-white/60",
         )}
         onClick={onClose}
       >

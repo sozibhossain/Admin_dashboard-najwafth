@@ -47,14 +47,16 @@ export async function updateShopStatus(shopId: string, status: "verified" | "not
 
 export async function getOrders(params: { page: number; limit: number; status?: string }) {
   const response = await apiClient.get("/order", { params });
-  const orders = response.data.data || [];
+  const payload = response.data.data || {};
+  const orders = Array.isArray(payload) ? payload : payload.orders || [];
+  const pagination = Array.isArray(payload) ? undefined : payload.pagination;
   return {
     orders,
     pagination: {
-      total: orders.length < params.limit && params.page === 1 ? orders.length : params.page * params.limit + (orders.length === params.limit ? 1 : 0),
-      page: params.page,
-      limit: params.limit,
-      totalPages: orders.length === params.limit ? params.page + 1 : params.page,
+      total: pagination?.total ?? orders.length,
+      page: pagination?.page ?? params.page,
+      limit: pagination?.limit ?? params.limit,
+      totalPages: pagination?.totalPages ?? 1,
     },
   };
 }
@@ -81,6 +83,34 @@ export async function assignDriverToRequest(id: string, driverId: string) {
 
 export async function getDriverRequestsByDriver(driverId: string) {
   const response = await apiClient.get(`/driver-request/driver-requests/driver/${driverId}`);
+  return response.data.data;
+}
+
+export async function getCategories(params?: { includeProducts?: boolean }) {
+  const response = await apiClient.get("/category", { params });
+  return response.data.data;
+}
+
+export async function createCategory(formData: FormData) {
+  const response = await apiClient.post("/category/add", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data.data;
+}
+
+export async function updateCategory(id: string, formData: FormData) {
+  const response = await apiClient.put(`/category/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data.data;
+}
+
+export async function deleteCategory(id: string) {
+  const response = await apiClient.delete(`/category/${id}`);
   return response.data.data;
 }
 
