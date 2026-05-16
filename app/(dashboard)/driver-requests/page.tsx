@@ -1,16 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AdminMetricCard,
   AdminPageFrame,
   AssignDriverModal,
   RequestCard,
   SegmentedTabs,
+  type DriverRow,
 } from "@/components/admin/primitives";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAdminOverview, getDriverRequests } from "@/lib/api";
+import { assignDriverToRequest, getAdminOverview, getDriverRequests, getDrivers } from "@/lib/api";
+import { toast } from "sonner";
 
 type DriverRequestRow = {
   _id: string;
@@ -28,6 +30,10 @@ type DriverRequestRow = {
     orderId?: string;
     _id?: string;
   };
+  driver?: {
+    _id?: string;
+    name?: string;
+  };
 };
 
 type DriverRequestsResponse = {
@@ -36,16 +42,15 @@ type DriverRequestsResponse = {
 };
 
 type AdminOverview = {
-  recentDrivers: {
-    _id: string;
-    name?: string;
-    phone?: string;
-  }[];
+  recentDrivers: DriverRow[];
 };
 
 export default function DriverRequestsPage() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState("all");
   const [openAssign, setOpenAssign] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<DriverRequestRow | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
 
   const requestsQuery = useQuery({
     queryKey: ["admin-driver-requests", "screen"],
@@ -55,9 +60,28 @@ export default function DriverRequestsPage() {
     queryKey: ["admin-overview"],
     queryFn: getAdminOverview,
   });
+  const driversQuery = useQuery({
+    queryKey: ["admin-drivers"],
+    queryFn: getDrivers,
+    enabled: openAssign,
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: ({ requestId, driverId }: { requestId: string; driverId: string }) =>
+      assignDriverToRequest(requestId, driverId),
+    onSuccess: () => {
+      toast.success("Driver assigned successfully.");
+      queryClient.invalidateQueries({ queryKey: ["admin-driver-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-drivers"] });
+      setOpenAssign(false);
+      setSelectedRequest(null);
+      setSelectedDriverId(null);
+    },
+  });
 
   const requestsData = requestsQuery.data as DriverRequestsResponse | undefined;
   const overview = overviewQuery.data as AdminOverview | undefined;
+  const drivers = (driversQuery.data as DriverRow[] | undefined) || [];
 
   const filteredRequests = useMemo(() => {
     const rows = requestsData?.requests || [];
@@ -72,7 +96,7 @@ export default function DriverRequestsPage() {
     return rows.filter((row) => row.status === tab);
   }, [requestsData?.requests, tab]);
 
-  if (requestsQuery.isLoading) {
+  if (requestsQuery.isLoading || overviewQuery.isLoading) {
     return (
       <AdminPageFrame title="For Driver Requests" subtitle="See Orders from this Store">
         <div className="grid gap-4 lg:grid-cols-3">
@@ -87,6 +111,8 @@ export default function DriverRequestsPage() {
 
   const totalPending = (requestsData?.requests || []).filter((row) => row.status === "pending").length;
   const totalCompleted = (requestsData?.requests || []).filter((row) => row.status === "accepted").length;
+  const selectedRequestOrderLabel =
+    selectedRequest?.orderId?.orderId || selectedRequest?.orderId?._id || selectedRequest?._id || "Request";
 
   return (
     <AdminPageFrame title="For Driver Requests" subtitle="See Orders from this Store">
@@ -116,23 +142,40 @@ export default function DriverRequestsPage() {
               ...request,
               orderId: request.orderId?.orderId || request.orderId?._id || request._id,
             }}
-            actionLabel="Assign Driver"
-            onAction={() => setOpenAssign(true)}
+            actionLabel={request.driver?._id ? "Change Driver" : "Assign Driver"}
+            onAction={() => {
+              setSelectedRequest(request);
+              setSelectedDriverId(request.driver?._id || null);
+              setOpenAssign(true);
+            }}
           />
         ))}
       </div>
 
       <AssignDriverModal
         open={openAssign}
-        title="Assign Driver to Order #OI027"
-        drivers={
-          (overview?.recentDrivers || []).map((driver, index) => ({
-            ...driver,
-            status: index % 2 === 0 ? "available" : "busy",
-            currentOrders: index % 2 === 0 ? 0 : 2,
-          })) || []
-        }
-        onClose={() => setOpenAssign(false)}
+        title={`Assign Driver to Order #${selectedRequestOrderLabel}`}
+        drivers={drivers}
+        loading={driversQuery.isLoading}
+        selectedDriverId={selectedDriverId}
+        assigning={assignMutation.isPending}
+        onSelectDriver={setSelectedDriverId}
+        onAssignDriver={() => {
+          if (!selectedRequest?._id || !selectedDriverId) {
+            toast.error("Select a driver first.");
+            return;
+          }
+
+          assignMutation.mutate({
+            requestId: selectedRequest._id,
+            driverId: selectedDriverId,
+          });
+        }}
+        onClose={() => {
+          setOpenAssign(false);
+          setSelectedRequest(null);
+          setSelectedDriverId(null);
+        }}
       />
     </AdminPageFrame>
   );

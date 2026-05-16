@@ -119,6 +119,11 @@ export async function getProfile() {
   return response.data.data;
 }
 
+export async function getDrivers() {
+  const response = await apiClient.get("/user/drivers");
+  return response.data.data;
+}
+
 export async function updateProfile(formData: FormData) {
   const response = await apiClient.patch("/user/me", formData, {
     headers: {

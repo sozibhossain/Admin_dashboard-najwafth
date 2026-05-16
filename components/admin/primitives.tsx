@@ -384,18 +384,20 @@ export function DriverCard({
   compact,
   onView,
   onAssign,
+  selected,
 }: {
   driver: DriverRow;
   compact?: boolean;
   onView?: () => void;
   onAssign?: () => void;
+  selected?: boolean;
 }) {
   const availability = driver.status || (driver.currentOrders ? "busy" : "available");
   const avatarUrl = getAssetUrl(driver.avatar);
   const driverDisplayName = driver.name || driver.email?.split("@")[0] || "Driver";
 
   return (
-    <Card className="rounded-[18px] border-[#d6dee7] p-4 shadow-none">
+    <Card className={cn("rounded-[18px] border-[#d6dee7] p-4 shadow-none", selected ? "border-[#6d98c0] bg-[#f5f9ff]" : "")}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-3">
           <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-full bg-[#dab38f] text-sm font-semibold text-white">
@@ -427,17 +429,6 @@ export function DriverCard({
             ) : null}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-3">
-          <div className="flex h-[60px] w-[52px] flex-col items-center justify-center rounded-[8px] border border-[#3d8ef5] text-[#4090f7]">
-            <Bike className="size-5" />
-            <span className="text-[12px]">{driver.vehicle || "Bike"}</span>
-          </div>
-          {onAssign ? (
-            <Button className="h-10 rounded-[10px] bg-[#6d98c0] px-5 text-[15px] hover:bg-[#5f88ae]" onClick={onAssign} type="button">
-              Assign
-            </Button>
-          ) : null}
-        </div>
       </div>
     </Card>
   );
@@ -448,11 +439,21 @@ export function AssignDriverModal({
   title,
   drivers,
   onClose,
+  selectedDriverId,
+  assigning,
+  onSelectDriver,
+  onAssignDriver,
+  loading,
 }: {
   open: boolean;
   title: string;
   drivers: DriverRow[];
   onClose: () => void;
+  selectedDriverId?: string | null;
+  assigning?: boolean;
+  onSelectDriver?: (driverId: string) => void;
+  onAssignDriver?: () => void;
+  loading?: boolean;
 }) {
   if (!open) {
     return null;
@@ -472,15 +473,30 @@ export function AssignDriverModal({
         </div>
         <div className="px-6 pb-6">
           <div className="mb-4 flex justify-end">
-            <Button className="h-10 rounded-[10px] bg-[#6d98c0] px-5 text-[15px] hover:bg-[#5f88ae]" type="button">
+            <Button
+              className="h-10 rounded-[10px] bg-[#6d98c0] px-5 text-[15px] hover:bg-[#5f88ae]"
+              disabled={!selectedDriverId || assigning || !onAssignDriver}
+              onClick={onAssignDriver}
+              type="button"
+            >
               <CheckCircle2 className="mr-2 size-4" />
-              Assigned
+              {!onAssignDriver ? "Assigned" : assigning ? "Assigning..." : "Assign Driver"}
             </Button>
           </div>
           <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
-            {drivers.map((driver) => (
-              <DriverCard key={driver._id} compact driver={driver} />
-            ))}
+            {loading ? <p className="py-8 text-center text-[14px] text-[#667085]">Loading drivers...</p> : null}
+            {!loading && drivers.length === 0 ? <p className="py-8 text-center text-[14px] text-[#667085]">No drivers available.</p> : null}
+            {!loading
+              ? drivers.map((driver) => (
+                  <DriverCard
+                    key={driver._id}
+                    compact
+                    driver={driver}
+                    onAssign={onSelectDriver ? () => onSelectDriver(driver._id) : undefined}
+                    selected={selectedDriverId === driver._id}
+                  />
+                ))
+              : null}
           </div>
         </div>
       </div>

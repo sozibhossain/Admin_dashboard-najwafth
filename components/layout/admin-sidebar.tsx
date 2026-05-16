@@ -62,7 +62,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               onClick={onClose}
             >
               <Icon className="size-5" />
-              {item.label}
+              <span className={isActive ? "text-white" : "text-[#252525]"}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -78,7 +80,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         onClick={onClose}
       >
         <LogOut className="size-5" />
-        Log Out
+        <span className={matchRoute(pathname, "/logout") ? "text-white" : "text-[#252525]"}>
+          Log Out
+        </span>
       </Link>
     </div>
   );

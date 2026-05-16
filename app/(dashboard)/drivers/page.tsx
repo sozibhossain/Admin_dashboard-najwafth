@@ -88,12 +88,8 @@ export default function DriversManagementPage() {
       <AdminSectionCard className="mt-5">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-[24px] font-semibold text-[#202124]">Assign Driver to Order #{requestLabel}</h2>
-            <p className="mt-1 text-[16px] text-[#444]">Select an available driver</p>
+            <h2 className="text-[24px] font-semibold text-[#202124]">Driver</h2>
           </div>
-          <button className="flex h-[50px] items-center rounded-[10px] bg-[#6d98c0] px-7 text-[16px] font-medium text-white">
-            Assigned
-          </button>
         </div>
 
         <div className="space-y-4">
